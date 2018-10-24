@@ -47,6 +47,7 @@ DECLARE_GLOBAL_DATA_PTR;
 /*
  * Board-specific Platform code can reimplement show_boot_progress () if needed
  */
+#define inline inline __attribute__((always_inline)) __attribute__((__gnu_inline__))
 void inline __show_boot_progress (int val) {}
 void show_boot_progress (int val) __attribute__((weak, alias("__show_boot_progress")));
 
