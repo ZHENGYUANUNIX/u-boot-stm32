@@ -543,8 +543,9 @@ void
 BootpRequest (void)
 {
 	volatile uchar *pkt, *iphdr;
-	Bootp_t *bp;
+	Bootp_t bp;
 	int ext_len, pktlen, iplen;
+	memset ((void*)&bp, 0, sizeof(Bootp_t));
 
 #if defined(CONFIG_CMD_DHCP)
 	dhcp_state = INIT;
@@ -626,44 +627,43 @@ BootpRequest (void)
 	iphdr = pkt;	/* We need this later for NetSetIP() */
 	pkt += IP_HDR_SIZE;
 
-	bp = (Bootp_t *)pkt;
-	bp->bp_op = OP_BOOTREQUEST;
-	bp->bp_htype = HWT_ETHER;
-	bp->bp_hlen = HWL_ETHER;
-	bp->bp_hops = 0;
-	bp->bp_secs = htons(get_timer(0) / 1000);
-	NetWriteIP(&bp->bp_ciaddr, 0);
-	NetWriteIP(&bp->bp_yiaddr, 0);
-	NetWriteIP(&bp->bp_siaddr, 0);
-	NetWriteIP(&bp->bp_giaddr, 0);
-	memcpy (bp->bp_chaddr, NetOurEther, 6);
-	copy_filename (bp->bp_file, BootFile, sizeof(bp->bp_file));
+	bp.bp_op = OP_BOOTREQUEST;
+	bp.bp_htype = HWT_ETHER;
+	bp.bp_hlen = HWL_ETHER;
+	bp.bp_hops = 0;
+	bp.bp_secs = htons(get_timer(0) / 1000);
+	NetWriteIP(&bp.bp_ciaddr, 0);
+	NetWriteIP(&bp.bp_yiaddr, 0);
+	NetWriteIP(&bp.bp_siaddr, 0);
+	NetWriteIP(&bp.bp_giaddr, 0);
+	memcpy (bp.bp_chaddr, NetOurEther, 6);
+	copy_filename (bp.bp_file, BootFile, sizeof(bp.bp_file));
 
 	/* Request additional information from the BOOTP/DHCP server */
 #if defined(CONFIG_CMD_DHCP)
-	ext_len = DhcpExtended((u8 *)bp->bp_vend, DHCP_DISCOVER, 0, 0);
+	ext_len = DhcpExtended((u8 *)bp.bp_vend, DHCP_DISCOVER, 0, 0);
 #else
-	ext_len = BootpExtended((u8 *)bp->bp_vend);
+	ext_len = BootpExtended((u8 *)bp.bp_vend);
 #endif
 
 	/*
 	 *	Bootp ID is the lower 4 bytes of our ethernet address
 	 *	plus the current time in ms.
 	 */
-	BootpID = ((ulong)NetOurEther[2] << 24)
-		| ((ulong)NetOurEther[3] << 16)
-		| ((ulong)NetOurEther[4] << 8)
-		| (ulong)NetOurEther[5];
+	memcpy(&BootpID, &NetOurEther[2], 4);
 	BootpID += get_timer(0);
 	BootpID	 = htonl(BootpID);
-	NetCopyLong(&bp->bp_id, &BootpID);
+	NetCopyLong(&bp.bp_id, &BootpID);
+
+        /* Fill bootp to the network packet */
+	memcpy(pkt, &bp, sizeof(Bootp_t));
 
 	/*
 	 * Calculate proper packet lengths taking into account the
 	 * variable size of the options field
 	 */
-	pktlen = ((int)(pkt-NetTxPacket)) + BOOTP_HDR_SIZE - sizeof(bp->bp_vend) + ext_len;
-	iplen = BOOTP_HDR_SIZE - sizeof(bp->bp_vend) + ext_len;
+	pktlen = ((int)(pkt-NetTxPacket)) + BOOTP_HDR_SIZE - sizeof(bp.bp_vend) + ext_len;
+	iplen = BOOTP_HDR_SIZE - sizeof(bp.bp_vend) + ext_len;
 	NetSetIP(iphdr, 0xFFFFFFFFL, PORT_BOOTPS, PORT_BOOTPC, iplen);
 	NetSetTimeout(SELECT_TIMEOUT, BootpTimeout);
 
@@ -795,25 +795,25 @@ static int DhcpMessageType(unsigned char *popt)
 static void DhcpSendRequestPkt(Bootp_t *bp_offer)
 {
 	volatile uchar *pkt, *iphdr;
-	Bootp_t *bp;
+	Bootp_t bp;
 	int pktlen, iplen, extlen;
 	IPaddr_t OfferedIP;
 
 	debug("DhcpSendRequestPkt: Sending DHCPREQUEST\n");
 	pkt = NetTxPacket;
 	memset ((void*)pkt, 0, PKTSIZE);
+	memset ((void*)&bp, 0, sizeof(Bootp_t));
 
 	pkt += NetSetEther(pkt, NetBcastAddr, PROT_IP);
 
 	iphdr = pkt;		/* We'll need this later to set proper pkt size */
 	pkt += IP_HDR_SIZE;
 
-	bp = (Bootp_t *)pkt;
-	bp->bp_op = OP_BOOTREQUEST;
-	bp->bp_htype = HWT_ETHER;
-	bp->bp_hlen = HWL_ETHER;
-	bp->bp_hops = 0;
-	bp->bp_secs = htons(get_timer(0) / 1000);
+	bp.bp_op = OP_BOOTREQUEST;
+	bp.bp_htype = HWT_ETHER;
+	bp.bp_hlen = HWL_ETHER;
+	bp.bp_hops = 0;
+	bp.bp_secs = htons(get_timer(0) / 1000);
 	/* Do not set the client IP, your IP, or server IP yet, since it hasn't been ACK'ed by
 	 * the server yet */
 
@@ -821,15 +821,15 @@ static void DhcpSendRequestPkt(Bootp_t *bp_offer)
 	 * RFC3046 requires Relay Agents to discard packets with
 	 * nonzero and offered giaddr
 	 */
-	NetWriteIP(&bp->bp_giaddr, 0);
+	NetWriteIP(&bp.bp_giaddr, 0);
 
-	memcpy (bp->bp_chaddr, NetOurEther, 6);
+	memcpy (bp.bp_chaddr, NetOurEther, 6);
 
 	/*
 	 * ID is the id of the OFFER packet
 	 */
 
-	NetCopyLong(&bp->bp_id, &bp_offer->bp_id);
+	NetCopyLong(&bp.bp_id, &bp_offer->bp_id);
 
 	/*
 	 * Copy options from OFFER packet if present
@@ -837,10 +837,13 @@ static void DhcpSendRequestPkt(Bootp_t *bp_offer)
 
 	/* Copy offered IP into the parameters request list */
 	NetCopyIP(&OfferedIP, &bp_offer->bp_yiaddr);
-	extlen = DhcpExtended((u8 *)bp->bp_vend, DHCP_REQUEST, NetDHCPServerIP, OfferedIP);
+	extlen = DhcpExtended((u8 *)bp.bp_vend, DHCP_REQUEST, NetDHCPServerIP, OfferedIP);
 
-	pktlen = ((int)(pkt-NetTxPacket)) + BOOTP_HDR_SIZE - sizeof(bp->bp_vend) + extlen;
-	iplen = BOOTP_HDR_SIZE - sizeof(bp->bp_vend) + extlen;
+        /* Fill bootp to the network packet */
+	memcpy(pkt, &bp, sizeof(Bootp_t));
+
+	pktlen = ((int)(pkt-NetTxPacket)) + BOOTP_HDR_SIZE - sizeof(bp.bp_vend) + extlen;
+	iplen = BOOTP_HDR_SIZE - sizeof(bp.bp_vend) + extlen;
 	NetSetIP(iphdr, 0xFFFFFFFFL, PORT_BOOTPS, PORT_BOOTPC, iplen);
 
 	debug("Transmitting DHCPREQUEST packet: len = %d\n", pktlen);
