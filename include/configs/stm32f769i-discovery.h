@@ -308,6 +308,9 @@
 #undef CONFIG_CMD_XIMG
 #undef CONFIG_CMD_BUFCOPY
 
+/* Enable DHCP */
+#define CONFIG_CMD_DHCP
+
 /*
  * To save memory disable long help
  */
