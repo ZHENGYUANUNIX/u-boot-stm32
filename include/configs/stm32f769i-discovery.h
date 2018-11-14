@@ -311,6 +311,9 @@
 /* Enable DHCP */
 #define CONFIG_CMD_DHCP
 
+/* Directly jump with "go" */
+#define CONFIG_CMD_GO_DIRECT_JUMP
+
 /*
  * To save memory disable long help
  */
@@ -326,7 +329,12 @@
  */
 #define CONFIG_BOOTDELAY		1
 #define CONFIG_ZERO_BOOTDELAY_CHECK
+
+#ifdef CONFIG_CMD_GO_DIRECT_JUMP
+#define CONFIG_BOOTCOMMAND		"go " stringify(STM32_QSPI_BANK)
+#else
 #define CONFIG_BOOTCOMMAND		"run qspiboot || echo 'Boot from QSPI failed, run the update command'"
+#endif
 
 /* boot args and env */
 #define CONFIG_HOSTNAME			stm32f769i-disco

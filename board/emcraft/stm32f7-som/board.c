@@ -847,3 +847,32 @@ int board_late_init(void)
 	return rv;
 }
 #endif /* BOARD_LATE_INIT */
+
+#ifdef CONFIG_CMD_GO_DIRECT_JUMP
+/* Code for overriding default "go" functionality for directly
+   jumping to a memory location without return. This is needed
+   since:
+   - We are executing from QSPI
+   - RTEMS image for stm32f769i places executable code in
+     in the beginning of QSPI address range
+   - Command bootm requires u-boot header before the executable code
+*/
+
+typedef void (*jump_t)(void);
+
+static inline void __set_MSP(uint32_t topOfMainStack)
+{
+	asm volatile ("MSR msp, %0\n" : : "r" (topOfMainStack) : "sp");
+}
+
+unsigned long do_go_exec (ulong (*entry)(int, char *[]), int argc, char *argv[])
+{
+	jump_t jump;
+	jump = (jump_t) (*(uint32_t *)(entry + 4));
+	__set_MSP(*(uint32_t*) entry);
+        STM32_SYSCFG->memrmp |= SYSCFG_MEMRMP_SWP_FMC_0;
+	CM3_SCB_REGS->vtor = (uint32_t)entry;
+	jump();
+	return 0;
+}
+#endif // CONFIG_CMD_GO_DIRECT_JUMP

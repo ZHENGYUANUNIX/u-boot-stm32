@@ -139,11 +139,6 @@
 #define STM32_DMA_RBD_RCH		(1 << 14)	/* 2nd address chained*/
 
 /*
- * STM32 SYSCFG definitions
- */
-#define STM32_SYSCFG_BASE		(STM32_APB2PERIPH_BASE + 0x3800)
-
-/*
  * PMC reg fields
  */
 #define STM32_SYSCFG_PMC_SEL_BIT	23		/* MII/RMII selection */
@@ -249,19 +244,6 @@ struct stm32_mac_regs {
 };
 #define STM32_MAC			((volatile struct stm32_mac_regs *) \
 					STM32_MAC_BASE)
-
-/*
- * SYSCFG register map
- */
-struct stm32_syscfg_regs {
-	u32	memrmp;		/* Memory remap				      */
-	u32	pmc;		/* Peripheral mode configuration	      */
-	u32	exticr[4];	/* External interrupt configuration	      */
-	u32	rsv0[2];
-	u32	cmpcr;		/* Compensation cell control		      */
-};
-#define STM32_SYSCFG			((volatile struct stm32_syscfg_regs *) \
-					STM32_SYSCFG_BASE)
 
 /*
  * STM32 ETH Normal DMA buffer descriptors

@@ -121,6 +121,24 @@ struct stm32_pwr_regs {
  */
 #define STM32F4_LTDC_BASE	(STM32_APB2PERIPH_BASE + 0x6800)
 
+/*
+ * STM32 SYSCFG definitions
+ */
+#define STM32_SYSCFG_BASE	(STM32_APB2PERIPH_BASE + 0x3800)
+
+/*
+ * SYSCFG register map
+ */
+struct stm32_syscfg_regs {
+	u32	memrmp;		/* Memory remap				      */
+	u32	pmc;		/* Peripheral mode configuration	      */
+	u32	exticr[4];	/* External interrupt configuration	      */
+	u32	rsv0[2];
+	u32	cmpcr;		/* Compensation cell control		      */
+};
+#define STM32_SYSCFG			((volatile struct stm32_syscfg_regs *) \
+					STM32_SYSCFG_BASE)
+#define SYSCFG_MEMRMP_SWP_FMC_0         (1U << 10U);
 
 /******************************************************************************
  * FIXME: get rid of this
